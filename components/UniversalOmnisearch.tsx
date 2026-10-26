@@ -183,10 +183,6 @@ export const UniversalOmnisearch: React.FC<UniversalOmnisearchProps> = ({
                         <span>{drug.presentationForm}</span>
                         <span aria-hidden="true">·</span>
                         <span className="text-slate-600 font-medium">{drug.holderLaboratory}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="text-emerald-700 font-mono tabular-nums">
-                          {drug.ppvDzd.toFixed(2)} DZD
-                        </span>
                       </div>
                     </div>
 

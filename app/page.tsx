@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useSyncExternalStore } from 'react';
 import { 
   ALGERIAN_DRUG_DATABASE, 
   DrugMonograph 
@@ -17,24 +17,36 @@ import { UniversalOmnisearch } from '../components/UniversalOmnisearch';
 import { SpecialtySidebar } from '../components/SpecialtySidebar';
 import { MonographViewer } from '../components/MonographViewer';
 import { InteractionScreeningDrawer } from '../components/InteractionScreeningDrawer';
-import { DrugInteractionMatrixScreen } from '../components/DrugInteractionMatrixScreen';
-import { RenalDoseCalculatorScreen } from '../components/RenalDoseCalculatorScreen';
-import { CnasFormularyScreen } from '../components/CnasFormularyScreen';
 import { EmergencyProtocolsScreen } from '../components/EmergencyProtocolsScreen';
 import { RenalModalDrawer } from '../components/RenalModalDrawer';
-import { ShieldAlert, AlertOctagon, Heart, Pill, Search } from 'lucide-react';
+import { AddMedicationModal } from '../components/AddMedicationModal';
+import {
+  getCustomPharmacopoeiaServerSnapshot,
+  getCustomPharmacopoeiaSnapshot,
+  saveCustomPharmacopoeia,
+  subscribeCustomPharmacopoeia,
+} from '../lib/custom-pharmacopoeia-store';
 
 export default function ClinicalApp() {
-  // Navigation tabs: 'monographs' | 'matrix' | 'renal' | 'cnas' | 'emergency'
-  const [currentTab, setCurrentTab] = useState<'monographs' | 'matrix' | 'renal' | 'cnas' | 'emergency'>('monographs');
+  // Navigation tabs: 'monographs' | 'emergency'
+  const [currentTab, setCurrentTab] = useState<'monographs' | 'emergency'>('monographs');
 
   // Currently selected drug for the monograph viewer
   const [selectedDrug, setSelectedDrug] = useState<DrugMonograph>(ALGERIAN_DRUG_DATABASE[0]);
 
   // Sidebar filters
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('Toutes');
-  const [selectedRegulatory, setSelectedRegulatory] = useState<string>('Tous');
-  const [cnasOnly, setCnasOnly] = useState<boolean>(false);
+
+  const customData = useSyncExternalStore(
+    subscribeCustomPharmacopoeia,
+    getCustomPharmacopoeiaSnapshot,
+    getCustomPharmacopoeiaServerSnapshot
+  );
+  const customDrugs = customData.drugs;
+  const customSpecialties = customData.specialties;
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const drugs = useMemo(() => [...ALGERIAN_DRUG_DATABASE, ...customDrugs], [customDrugs]);
 
   // Active patient prescription basket
   // Initialize with a realistic emergency duo: Lovenox + Kardegic to showcase interaction safety checking immediately
@@ -59,24 +71,27 @@ export default function ClinicalApp() {
 
   // Unique list of specialties
   const specialties = useMemo(() => {
-    const list = Array.from(new Set(ALGERIAN_DRUG_DATABASE.map((d) => d.specialty)));
-    return ['Toutes', ...list];
-  }, []);
+    const merged = Array.from(new Set(ALGERIAN_DRUG_DATABASE.map((d) => d.specialty)));
+    for (const specialty of [...customSpecialties, ...customDrugs.map((d) => d.specialty)]) {
+      if (specialty && !merged.includes(specialty)) {
+        merged.push(specialty);
+      }
+    }
+    return ['Toutes', ...merged];
+  }, [customSpecialties, customDrugs]);
 
   // Filtered drugs based on sidebar selection
   const filteredDrugs = useMemo(() => {
-    return ALGERIAN_DRUG_DATABASE.filter((drug) => {
+    return drugs.filter((drug) => {
       const matchSpecialty = selectedSpecialty === 'Toutes' || drug.specialty === selectedSpecialty;
-      const matchRegulatory = selectedRegulatory === 'Tous' || drug.regulatoryStatus === selectedRegulatory;
-      const matchCnas = !cnasOnly || drug.cnasRatePercent === 100;
-      return matchSpecialty && matchRegulatory && matchCnas;
+      return matchSpecialty;
     });
-  }, [selectedSpecialty, selectedRegulatory, cnasOnly]);
+  }, [drugs, selectedSpecialty]);
 
   // Evaluate renal state
   const renalState = useMemo(() => {
-    return evaluatePatientRenalState(patientParams, ALGERIAN_DRUG_DATABASE);
-  }, [patientParams]);
+    return evaluatePatientRenalState(patientParams, drugs);
+  }, [patientParams, drugs]);
 
   // Analyze active prescription
   const prescriptionAnalysis = useMemo(() => {
@@ -119,6 +134,40 @@ export default function ClinicalApp() {
     return prescribedDrugs.some((d) => d.id === drugId);
   };
 
+  const handleAddDrug = (drug: DrugMonograph) => {
+    const nextDrugs = customDrugs.some((item) => item.id === drug.id)
+      ? customDrugs
+      : [...customDrugs, drug];
+    const nextSpecialties = customSpecialties.includes(drug.specialty)
+      ? customSpecialties
+      : [...customSpecialties, drug.specialty];
+    saveCustomPharmacopoeia({ drugs: nextDrugs, specialties: nextSpecialties });
+    setSelectedDrug(drug);
+    setSelectedSpecialty(drug.specialty);
+    setCurrentTab('monographs');
+  };
+
+  const handleAddSpecialty = (specialty: string) => {
+    if (!customSpecialties.includes(specialty)) {
+      saveCustomPharmacopoeia({
+        drugs: customDrugs,
+        specialties: [...customSpecialties, specialty],
+      });
+    }
+    setSelectedSpecialty(specialty);
+    setCurrentTab('monographs');
+  };
+
+  const handleSelectSpecialty = (specialty: string) => {
+    setSelectedSpecialty(specialty);
+    const firstDrug = drugs.find(
+      (drug) => specialty === 'Toutes' || drug.specialty === specialty
+    );
+    if (firstDrug) {
+      setSelectedDrug(firstDrug);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#191C1E] flex flex-col font-sans selection:bg-[#86F2E4] selection:text-[#00201D]">
       {/* Clinical Header conforming to Top Bar Contract */}
@@ -131,6 +180,7 @@ export default function ClinicalApp() {
         prescribedCount={prescribedDrugs.length}
         hasContraindication={prescriptionAnalysis.hasAbsoluteContraindication}
         onOpenPrescriptionTray={() => setIsMobileTrayOpen(true)}
+        onOpenAddModal={() => setIsAddModalOpen(true)}
       />
 
       {/* Main Workspace Frame */}
@@ -141,7 +191,7 @@ export default function ClinicalApp() {
             {/* Top Omnisearch Bar */}
             <div className="max-w-4xl mx-auto w-full">
               <UniversalOmnisearch
-                drugs={ALGERIAN_DRUG_DATABASE}
+                drugs={drugs}
                 selectedDrug={selectedDrug}
                 onSelectDrug={(drug) => setSelectedDrug(drug)}
                 onPrescribeQuick={(drug) => handleTogglePrescription(drug)}
@@ -156,102 +206,74 @@ export default function ClinicalApp() {
                 <SpecialtySidebar
                   specialties={specialties}
                   selectedSpecialty={selectedSpecialty}
-                  onSelectSpecialty={setSelectedSpecialty}
-                  selectedRegulatory={selectedRegulatory}
-                  onSelectRegulatory={setSelectedRegulatory}
-                  drugs={ALGERIAN_DRUG_DATABASE}
-                  cnasOnly={cnasOnly}
-                  onToggleCnasOnly={() => setCnasOnly(!cnasOnly)}
+                  onSelectSpecialty={handleSelectSpecialty}
+                  drugs={drugs}
                 />
               </div>
 
               {/* Column 2: High-Speed Indexed Search & Monograph Viewer */}
               <div className="flex-1 min-w-0 w-full space-y-4">
-                {/* Horizontal Quick-Selector Pill Strip for currently filtered specialty */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                  <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider shrink-0 mr-1">
-                    Index :
-                  </span>
-                  {filteredDrugs.map((drug) => {
-                    const isSelected = selectedDrug.id === drug.id;
-                    const inPrescription = isDrugPrescribed(drug.id);
-                    return (
-                      <button
-                        key={drug.id}
-                        onClick={() => setSelectedDrug(drug)}
-                        className={`px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap shrink-0 transition-colors border ${
-                          isSelected
-                            ? 'bg-[#0F2942] text-white border-[#0F2942]'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span>{drug.brandName}</span>
-                        {inPrescription && (
-                          <span className="ml-1 text-[10px] text-teal-400 font-bold">●</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                {filteredDrugs.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+                    <p className="text-sm font-semibold text-[#0F2942]">
+                      Aucun médicament dans cette spécialité.
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Ajoutez une monographie pour commencer.
+                    </p>
+                    <button
+                      onClick={() => setIsAddModalOpen(true)}
+                      className="mt-4 rounded-lg bg-[#0D9488] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#0F766E]"
+                    >
+                      Ajouter un médicament
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Horizontal Quick-Selector Pill Strip for currently filtered specialty */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                      <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider shrink-0 mr-1">
+                        Index :
+                      </span>
+                      {filteredDrugs.map((drug) => {
+                        const isSelected = selectedDrug.id === drug.id;
+                        const inPrescription = isDrugPrescribed(drug.id);
+                        return (
+                          <button
+                            key={drug.id}
+                            onClick={() => setSelectedDrug(drug)}
+                            className={`px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap shrink-0 transition-colors border ${
+                              isSelected
+                                ? 'bg-[#0F2942] text-white border-[#0F2942]'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span>{drug.brandName}</span>
+                            {inPrescription && (
+                              <span className="ml-1 text-[10px] text-teal-400 font-bold">●</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                {/* Master Monograph Card Container */}
-                <MonographViewer
-                  drug={selectedDrug}
-                  isPrescribed={isDrugPrescribed(selectedDrug.id)}
-                  onTogglePrescription={handleTogglePrescription}
-                  onOpenRenalCalculator={() => setIsRenalModalOpen(true)}
-                  patientClearance={renalState.cockcroftClearanceMlMin}
-                />
+                    {/* Master Monograph Card Container */}
+                    <MonographViewer
+                      drug={selectedDrug}
+                      isPrescribed={isDrugPrescribed(selectedDrug.id)}
+                      onTogglePrescription={handleTogglePrescription}
+                      onOpenRenalCalculator={() => setIsRenalModalOpen(true)}
+                      patientClearance={renalState.cockcroftClearanceMlMin}
+                    />
+                  </>
+                )}
               </div>
 
-              {/* Column 3: Dedicated Persistent Interaction & Contraindication Drawer (Desktop) */}
-              <div className="hidden xl:block">
-                <InteractionScreeningDrawer
-                  prescribedDrugs={prescribedDrugs}
-                  onRemoveDrug={handleRemoveDrug}
-                  onClearPrescription={handleClearPrescription}
-                  analysis={prescriptionAnalysis}
-                  patientClearance={renalState.cockcroftClearanceMlMin}
-                  onOpenRenalModal={() => setIsRenalModalOpen(true)}
-                  onOpenFullMatrix={() => setCurrentTab('matrix')}
-                />
-              </div>
             </div>
           </div>
         )}
 
-        {/* VIEW 2: FULL DRUG-DRUG INTERACTION MATRIX SCREEN */}
-        {currentTab === 'matrix' && (
-          <DrugInteractionMatrixScreen
-            prescribedDrugs={prescribedDrugs}
-            onAddDrugToPrescription={handleTogglePrescription}
-            onRemoveDrugFromPrescription={handleRemoveDrug}
-          />
-        )}
-
-        {/* VIEW 3: RENAL DOSE & CLEARANCE CALCULATOR (COCKCROFT & CKD-EPI) */}
-        {currentTab === 'renal' && (
-          <RenalDoseCalculatorScreen
-            initialParams={patientParams}
-            onUpdateParams={(params) => setPatientParams(params)}
-            onSelectDrugForMonograph={(drug) => {
-              setSelectedDrug(drug);
-              setCurrentTab('monographs');
-            }}
-          />
-        )}
-
-        {/* VIEW 4: ALGERIAN CNAS FORMULARY & GENERICS SUBSTITUTION */}
-        {currentTab === 'cnas' && (
-          <CnasFormularyScreen
-            onSelectDrugForMonograph={(drug) => {
-              setSelectedDrug(drug);
-              setCurrentTab('monographs');
-            }}
-          />
-        )}
-
-        {/* VIEW 5: EMERGENCY HOSPITAL PROTOCOLS */}
+        {/* VIEW 2: EMERGENCY HOSPITAL PROTOCOLS */}
         {currentTab === 'emergency' && (
           <EmergencyProtocolsScreen
             onLoadProtocolToPrescription={handleLoadProtocolDrugs}
@@ -271,9 +293,19 @@ export default function ClinicalApp() {
         onUpdateParams={(p) => setPatientParams(p)}
       />
 
+      {isAddModalOpen && (
+        <AddMedicationModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          specialties={specialties}
+          onAddDrug={handleAddDrug}
+          onAddSpecialty={handleAddSpecialty}
+        />
+      )}
+
       {/* Mobile Slide-Over Drawer for Prescription Validation Tray */}
       {isMobileTrayOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs xl:hidden">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-t-2xl sm:rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col">
             <InteractionScreeningDrawer
               prescribedDrugs={prescribedDrugs}
@@ -284,10 +316,6 @@ export default function ClinicalApp() {
               onOpenRenalModal={() => {
                 setIsMobileTrayOpen(false);
                 setIsRenalModalOpen(true);
-              }}
-              onOpenFullMatrix={() => {
-                setIsMobileTrayOpen(false);
-                setCurrentTab('matrix');
               }}
               onClose={() => setIsMobileTrayOpen(false)}
               isMobileDrawer={true}

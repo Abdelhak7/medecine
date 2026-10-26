@@ -21,7 +21,7 @@ export interface DrugMonograph {
   dci: string; // Dénomination Commune Internationale
   atcCode: string;
   atcClassification: string;
-  specialty: 'Cardiologie' | 'Urgences & Réanimation' | 'Infectiologie' | 'Néphrologie' | 'Métabolisme & Diabète' | 'Neurologie & Psychiatrie' | 'Pneumologie' | 'Gastro-entérologie';
+  specialty: string;
   regulatoryStatus: 'Liste I' | 'Liste II' | 'Stupéfiant' | 'Non listé (Sans ordonnance)';
   holderLaboratory: string;
   originCountry: string;

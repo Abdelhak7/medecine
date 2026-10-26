@@ -1,14 +1,15 @@
 'use client';
 
 import React from 'react';
-import { ShieldAlert, Stethoscope, ShoppingBag, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Plus } from 'lucide-react';
 
 interface ClinicalHeaderProps {
-  currentTab: 'monographs' | 'matrix' | 'renal' | 'cnas' | 'emergency';
-  onTabChange: (tab: 'monographs' | 'matrix' | 'renal' | 'cnas' | 'emergency') => void;
+  currentTab: 'monographs' | 'emergency';
+  onTabChange: (tab: 'monographs' | 'emergency') => void;
   prescribedCount: number;
   hasContraindication: boolean;
   onOpenPrescriptionTray: () => void;
+  onOpenAddModal: () => void;
 }
 
 export const ClinicalHeader: React.FC<ClinicalHeaderProps> = ({
@@ -17,6 +18,7 @@ export const ClinicalHeader: React.FC<ClinicalHeaderProps> = ({
   prescribedCount,
   hasContraindication,
   onOpenPrescriptionTray,
+  onOpenAddModal,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#0F2942] text-white border-b border-[#1E3A5F]">
@@ -41,7 +43,7 @@ export const ClinicalHeader: React.FC<ClinicalHeaderProps> = ({
           </button>
         </div>
 
-        {/* Zone 2: 4–5 single-line clean text navigation links */}
+        {/* Zone 2: Single-line clean text navigation links */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <button
             onClick={() => onTabChange('monographs')}
@@ -52,36 +54,6 @@ export const ClinicalHeader: React.FC<ClinicalHeaderProps> = ({
             }`}
           >
             Monographies & Recherche
-          </button>
-          <button
-            onClick={() => onTabChange('matrix')}
-            className={`whitespace-nowrap shrink-0 transition-colors py-1 border-b-2 text-xs uppercase tracking-wider ${
-              currentTab === 'matrix'
-                ? 'text-[#86F2E4] border-[#0D9488] font-semibold'
-                : 'text-slate-300 border-transparent hover:text-white'
-            }`}
-          >
-            Matrice des Interactions
-          </button>
-          <button
-            onClick={() => onTabChange('renal')}
-            className={`whitespace-nowrap shrink-0 transition-colors py-1 border-b-2 text-xs uppercase tracking-wider ${
-              currentTab === 'renal'
-                ? 'text-[#86F2E4] border-[#0D9488] font-semibold'
-                : 'text-slate-300 border-transparent hover:text-white'
-            }`}
-          >
-            Calculateur Rénal
-          </button>
-          <button
-            onClick={() => onTabChange('cnas')}
-            className={`whitespace-nowrap shrink-0 transition-colors py-1 border-b-2 text-xs uppercase tracking-wider ${
-              currentTab === 'cnas'
-                ? 'text-[#86F2E4] border-[#0D9488] font-semibold'
-                : 'text-slate-300 border-transparent hover:text-white'
-            }`}
-          >
-            Formulaire CNAS
           </button>
           <button
             onClick={() => onTabChange('emergency')}
@@ -95,8 +67,16 @@ export const ClinicalHeader: React.FC<ClinicalHeaderProps> = ({
           </button>
         </nav>
 
-        {/* Zone 3: 1 primary action button */}
+        {/* Zone 3: primary actions */}
         <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={onOpenAddModal}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded border border-[#2B4C74] bg-[#1E3A5F] hover:bg-[#2B4C74] text-slate-200 transition-colors whitespace-nowrap shrink-0"
+            title="Ajouter un médicament ou une spécialité"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Ajouter</span>
+          </button>
           <button
             onClick={onOpenPrescriptionTray}
             className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded transition-all whitespace-nowrap shrink-0 ${
@@ -131,30 +111,6 @@ export const ClinicalHeader: React.FC<ClinicalHeaderProps> = ({
           }`}
         >
           Monographies
-        </button>
-        <button
-          onClick={() => onTabChange('matrix')}
-          className={`px-2.5 py-1 whitespace-nowrap rounded ${
-            currentTab === 'matrix' ? 'bg-[#0D9488] text-white font-medium' : 'text-slate-300'
-          }`}
-        >
-          Interactions
-        </button>
-        <button
-          onClick={() => onTabChange('renal')}
-          className={`px-2.5 py-1 whitespace-nowrap rounded ${
-            currentTab === 'renal' ? 'bg-[#0D9488] text-white font-medium' : 'text-slate-300'
-          }`}
-        >
-          Clairance
-        </button>
-        <button
-          onClick={() => onTabChange('cnas')}
-          className={`px-2.5 py-1 whitespace-nowrap rounded ${
-            currentTab === 'cnas' ? 'bg-[#0D9488] text-white font-medium' : 'text-slate-300'
-          }`}
-        >
-          CNAS (DZD)
         </button>
         <button
           onClick={() => onTabChange('emergency')}

@@ -122,9 +122,6 @@ export const MonographViewer: React.FC<MonographViewerProps> = ({
             <span className="mx-2 text-slate-400">·</span>
             <span className="text-slate-600">{drug.standardPackaging}</span>
           </div>
-          <div className="font-mono tabular-nums text-slate-800 font-semibold">
-            PPV Officine : <span className="text-[#0F2942] text-sm">{drug.ppvDzd.toFixed(2)} DZD</span>
-          </div>
         </div>
 
         {/* Black Box Warning banner if present (Contraindication Crimson #DC2626) */}
@@ -380,25 +377,7 @@ export const MonographViewer: React.FC<MonographViewerProps> = ({
         {activeTab === 'cnas' && (
           <div className="space-y-6">
             {/* Tariff overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold block mb-1">
-                  Prix Public Vente (PPV)
-                </span>
-                <div className="text-xl font-bold font-mono text-[#0F2942] tabular-nums">
-                  {drug.ppvDzd.toFixed(2)} <span className="text-xs font-normal">DZD</span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold block mb-1">
-                  Tarif Référence CNAS
-                </span>
-                <div className="text-xl font-bold font-mono text-[#0D9488] tabular-nums">
-                  {drug.referenceTarifDzd.toFixed(2)} <span className="text-xs font-normal">DZD</span>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 gap-4">
               <div className="p-4 bg-[#ECFDF5] border border-emerald-200 rounded-lg">
                 <span className="text-[11px] text-emerald-800 uppercase tracking-wider font-semibold block mb-1">
                   Prise en charge Chifa
@@ -428,7 +407,6 @@ export const MonographViewer: React.FC<MonographViewerProps> = ({
               ) : (
                 <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100 text-xs">
                   {drug.genericsAvailable.map((gen, idx) => {
-                    const diffDzd = drug.ppvDzd - gen.ppvDzd;
                     return (
                       <div
                         key={idx}
@@ -445,16 +423,6 @@ export const MonographViewer: React.FC<MonographViewerProps> = ({
                         </div>
 
                         <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <span className="font-mono font-bold text-slate-900 tabular-nums text-sm block">
-                              {gen.ppvDzd.toFixed(2)} DZD
-                            </span>
-                            {diffDzd > 0 && (
-                              <span className="text-[10px] text-emerald-700 font-medium">
-                                Économie : {diffDzd.toFixed(2)} DZD
-                              </span>
-                            )}
-                          </div>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
                             Chifa 100%
                           </span>

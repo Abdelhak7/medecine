@@ -8,10 +8,7 @@ import {
   Trash2, 
   X, 
   Calculator, 
-  FileText, 
-  CheckCircle2,
-  ChevronRight,
-  ExternalLink
+  CheckCircle2
 } from 'lucide-react';
 import { DrugMonograph } from '../lib/pharmacopoeia-data';
 import { PrescriptionAnalysisResult } from '../lib/prescription-checker';
@@ -23,7 +20,6 @@ interface InteractionScreeningDrawerProps {
   analysis: PrescriptionAnalysisResult;
   patientClearance: number;
   onOpenRenalModal: () => void;
-  onOpenFullMatrix: () => void;
   onClose?: () => void;
   isMobileDrawer?: boolean;
 }
@@ -35,7 +31,6 @@ export const InteractionScreeningDrawer: React.FC<InteractionScreeningDrawerProp
   analysis,
   patientClearance,
   onOpenRenalModal,
-  onOpenFullMatrix,
   onClose,
   isMobileDrawer = false,
 }) => {
@@ -113,9 +108,6 @@ export const InteractionScreeningDrawer: React.FC<InteractionScreeningDrawerProp
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono text-[11px] text-slate-700 tabular-nums">
-                      {drug.ppvDzd.toFixed(0)} DA
-                    </span>
                     <button
                       onClick={() => onRemoveDrug(drug.id)}
                       className="p-1 text-slate-400 hover:text-[#DC2626] transition-colors rounded"
@@ -137,13 +129,6 @@ export const InteractionScreeningDrawer: React.FC<InteractionScreeningDrawerProp
               <span className="font-bold text-[#0F2942] uppercase text-[11px] tracking-wider">
                 Analyse Croisée des Risques
               </span>
-              <button
-                onClick={onOpenFullMatrix}
-                className="text-[11px] text-[#0D9488] hover:underline font-semibold flex items-center gap-0.5"
-              >
-                <span>Matrice</span>
-                <ChevronRight className="w-3 h-3" />
-              </button>
             </div>
 
             {analysis.activeInteractions.length === 0 ? (
@@ -219,36 +204,6 @@ export const InteractionScreeningDrawer: React.FC<InteractionScreeningDrawerProp
                   <span>{alert.message}</span>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* CNAS Financial & Social Security Tally (in Algerian Dinars DZD) */}
-        {prescribedDrugs.length > 0 && (
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-              Bilan Financier & Remboursement CNAS
-            </span>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-600">Total Public (PPV) :</span>
-              <span className="font-mono font-bold text-slate-900 tabular-nums">
-                {analysis.cnasSummary.totalPpvDzd.toFixed(2)} DZD
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-emerald-800">
-              <span className="font-medium">Prise en charge CNAS :</span>
-              <span className="font-mono font-bold tabular-nums">
-                - {analysis.cnasSummary.cnasCoverageDzd.toFixed(2)} DZD
-              </span>
-            </div>
-
-            <div className="border-t border-slate-200 pt-1.5 flex items-center justify-between text-xs font-bold text-[#0F2942]">
-              <span>Ticket Modérateur (Patient) :</span>
-              <span className="font-mono tabular-nums text-sm">
-                {analysis.cnasSummary.patientCopayDzd.toFixed(2)} DZD
-              </span>
             </div>
           </div>
         )}
