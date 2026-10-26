@@ -18,3 +18,4 @@ View your app in AI Studio: https://ai.studio/apps/70c122d3-1f0c-4cd1-9462-739bd
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+# medpharma
